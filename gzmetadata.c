@@ -11,10 +11,11 @@ void printGzipMetaData(const char * filename)
 {
     int err;
     FILE *fp;
-    char *name = NULL;
     unsigned char flags;
     int noff;
     int nlen;
+    char *name = NULL;
+    char *comment = NULL;
     
     fp = fopen(filename, "r");
     if (NULL == fp )
@@ -51,12 +52,11 @@ void printGzipMetaData(const char * filename)
         return;
     }
     
-    /* re-using name poiner, since we free'd it above */
-    name = getGzipComment(fp, flags, noff, nlen);
-    if (NULL != name)
+    comment = getGzipComment(fp, flags, noff, nlen);
+    if (NULL != comment)
     {
-        printf("gzip comment: %s\n", name);
-        free(name);
+        printf("gzip comment: %s\n", comment);
+        free(comment);
     }
     
 }

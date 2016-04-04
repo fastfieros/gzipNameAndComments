@@ -14,6 +14,7 @@
 #define ERR_MAGIC                 (30)
 #define ERR_NO_NAME               (31)
 #define ERR_NO_COMMENT            (32)
+#define ERR_XLEN                  (33)
 
 //System errors
 #define ERR_OUT_OF_MEMORY         (40)

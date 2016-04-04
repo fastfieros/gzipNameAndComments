@@ -13,13 +13,11 @@
 
 void printGzipMetaData(const char * filename);
 
-//Internal
 int checkGzipMagic(FILE *fp);
 
 int getFlagByte(FILE *fp, unsigned char *flags);
 int getXlen(FILE *fp, int *xlen);
 int getNameOffset(FILE *fp, unsigned char flags, int *offset);
-int nameDone(char *name, currentLen);
 
 char *getGzipName(FILE *fp, unsigned char flags);
 

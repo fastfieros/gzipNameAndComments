@@ -142,7 +142,6 @@ int getXlen(FILE *fp, int *xlen)
 //Assumes valid fp
 int getNameOffset(FILE *fp, unsigned char flags, int *offset)
 {
-    int offset;
     int xlen = 0;
     
     if (GZ_FLAG_FNAME != (flags & GZ_FLAG_FNAME))
@@ -151,7 +150,7 @@ int getNameOffset(FILE *fp, unsigned char flags, int *offset)
         return ERR_NO_COMMENT;
     }
     
-    if (GZ_FLAG_XLEN == (flags & GZ_FLAG_XLEN))
+    if (GZ_FLAG_FEXTRA == (flags & GZ_FLAG_FEXTRA))
     {
         if (ERR_OK == getXlen(fp, &xlen))
         {
@@ -163,24 +162,25 @@ int getNameOffset(FILE *fp, unsigned char flags, int *offset)
         }
     }
     
-    offset = GZ_OFFSET_XLEN + xlen;
+    *offset = (GZ_OFFSET_XLEN + xlen);
     
-    return offset;
+    return ERR_OK;
 }
 
-int getMoreName(FILE *fp, char *name, int currentLen)
+int getMoreName(FILE *fp, char **name, int *currentLen)
 {
     int ret;
     size_t read;
     
-    name = realloc(currentLen + BLOCKSIZE);
+    *name = realloc(*name, *currentLen + BLOCKSIZE);
     
-    if (NULL == name)
+    if (NULL == *name)
     {
+        fprintf(stderr, "unable to allocate memory for name\n");
         return ERR_OUT_OF_MEMORY;
     }
     
-    read = fread(flags, 1, BLOCKSIZE, fp);
+    read = fread(&((*name)[*currentLen]), 1, BLOCKSIZE, fp);
     /* Multple conditions to check here:
        If the read returned 0, we might be at the end of the file, and
        need to check for the null terminator, if the read returned 
@@ -189,12 +189,18 @@ int getMoreName(FILE *fp, char *name, int currentLen)
        the EOF flag, then we hit an error. */ 
     if ( (read < 0) || ((read == 0) && (!feof(fp))) )
     {
+        fprintf(stderr, "Error reading name data\n");
         ret = ERR_FILE_READ;
     } 
     else
     {
-        currentLen += read;
-        if (name[currentLen-1] == '\0')
+        *currentLen += read;
+        
+        printf ("%s, ", *name);
+        
+        /* need to check that the full null terminated
+        string has been obtained */
+        if (strnlen(*name, *currentLen) < *currentLen)
         {
             /* signal caller that this 
                 string has a null terminator */
@@ -219,7 +225,7 @@ char *getGzipName(FILE *fp, unsigned char flags)
     int currentLen;
     char *name;
     
-    err = getNameOffset(*fp, flags, &nameOffset))
+    err = getNameOffset(fp, flags, &nameOffset);
     if (ERR_OK != err)
     {
         return NULL; 
@@ -238,14 +244,15 @@ char *getGzipName(FILE *fp, unsigned char flags)
     
     /* loop until an error, because getMoreName returns
        ERR_DONE when it finds the null termintor */
-    while (err = ERR_OK)
+    while (err == ERR_OK)
     {
-        err = getMoreName(fp, name, currentLen);
+        err = getMoreName(fp, &name, &currentLen);
+        
+        printf ("currentLen: 0x%x\n", currentLen);
     } 
     
     if (err == ERR_DONE)
     {
-        printf("NAME DONE!\n");
         return name;
     }
     else

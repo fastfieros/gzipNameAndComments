@@ -9,7 +9,7 @@
 #define GZ_FLAG_FNAME     (1<<3)
 #define GZ_FLAG_FCOMMMENT (1<<4)
 
-#define BLOCKSIZE         (2)
+#define BLOCKSIZE         (64)
 
 void printGzipMetaData(const char * filename);
 
@@ -17,8 +17,11 @@ int checkGzipMagic(FILE *fp);
 
 int getFlagByte(FILE *fp, unsigned char *flags);
 int getXlen(FILE *fp, int *xlen);
-int getNameOffset(FILE *fp, unsigned char flags, int *offset);
 
-char *getGzipName(FILE *fp, unsigned char flags);
+int getNameOffset(FILE *fp, unsigned char flags, int *offset);
+int getCommentOffset(unsigned char flags, int nameOffset, int nameLen, int *commnetOffset);
+
+char *getGzipName(FILE *fp, unsigned char flags, int *nameOffset, int *nameLen);
+char *getGzipComment(FILE *fp, unsigned char flags, int nameOffset, int nameLen);
 
 

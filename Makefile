@@ -16,7 +16,7 @@ OBJS := $(SOURCES:.c=.o)
 # Place any non-standard header paths here, -I will be appended by the 'foreach'
 INC :=
 INCLUDES=$(foreach d, $(INC), -I$d)
-CFLAGS := -g -o2 $(INCLUDES)
+CFLAGS := -Wall -Werror -g -o2 $(INCLUDES)
 
 # Target for linking the final executable. Call the compiler as a linker 
 # to avoid specifying all the default settings and paths. 

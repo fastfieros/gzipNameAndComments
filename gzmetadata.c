@@ -5,6 +5,7 @@
 /* System Includes */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 void printGzipMetaData(const char * filename)
 {
@@ -12,6 +13,8 @@ void printGzipMetaData(const char * filename)
     FILE *fp;
     char *name = NULL;
     unsigned char flags;
+    int noff;
+    int nlen;
     
     fp = fopen(filename, "r");
     if (NULL == fp )
@@ -34,10 +37,10 @@ void printGzipMetaData(const char * filename)
         return; 
     }
     
-    name = getGzipName(fp, flags);
+    name = getGzipName(fp, flags, &noff, &nlen);
     if (NULL != name)
     {
-        printf("gzip Name: %s\n", name);
+        printf("gzip name: %s\n", name);
         free(name);
     }
     else
@@ -48,16 +51,13 @@ void printGzipMetaData(const char * filename)
         return;
     }
     
-    //err = checkGzipOptCommentFlag(fp);
-    //if (ERR_OK != err)
-    //{
-    //    fprintf(stderr, "No optional comment in this file.\n");
-    //    return; 
-    //}
-    //else
-    //{
-    //    printGzipFieldComment(fp);
-    //}
+    /* re-using name poiner, since we free'd it above */
+    name = getGzipComment(fp, flags, noff, nlen);
+    if (NULL != name)
+    {
+        printf("gzip Name: %s\n", name);
+        free(name);
+    }
     
 }
 
@@ -139,6 +139,20 @@ int getXlen(FILE *fp, int *xlen)
     
 }
 
+int getCommentOffset(unsigned char flags, int nameOffset, int nameLen, 
+                     int *commentOffset)
+{
+    if (GZ_FLAG_FCOMMMENT != (flags & GZ_FLAG_FCOMMMENT))
+    {
+        fprintf(stderr, "No optional comment in this file.\n");
+        return ERR_NO_COMMENT;
+    }
+    
+    *commentOffset = nameOffset + nameLen;
+    
+    return ERR_OK;
+}
+
 //Assumes valid fp
 int getNameOffset(FILE *fp, unsigned char flags, int *offset)
 {
@@ -147,7 +161,7 @@ int getNameOffset(FILE *fp, unsigned char flags, int *offset)
     if (GZ_FLAG_FNAME != (flags & GZ_FLAG_FNAME))
     {
         fprintf(stderr, "No optional name in this file.\n");
-        return ERR_NO_COMMENT;
+        return ERR_NO_NAME;
     }
     
     if (GZ_FLAG_FEXTRA == (flags & GZ_FLAG_FEXTRA))
@@ -196,8 +210,6 @@ int getMoreName(FILE *fp, char **name, int *currentLen)
     {
         *currentLen += read;
         
-        printf ("%s, ", *name);
-        
         /* need to check that the full null terminated
         string has been obtained */
         if (strnlen(*name, *currentLen) < *currentLen)
@@ -218,21 +230,20 @@ int getMoreName(FILE *fp, char **name, int *currentLen)
 }
 
 //Assumes valid fp
-char *getGzipName(FILE *fp, unsigned char flags)
+char *getGzipName(FILE *fp, unsigned char flags, int *nameOffset, int *nameLen)
 {
     int err;
-    int nameOffset; 
     int currentLen;
     char *name;
     
-    err = getNameOffset(fp, flags, &nameOffset);
+    err = getNameOffset(fp, flags, nameOffset);
     if (ERR_OK != err)
     {
         return NULL; 
     }
     
     //seek to the flag location
-    if(-1 == fseek(fp, nameOffset, SEEK_SET))
+    if(-1 == fseek(fp, *nameOffset, SEEK_SET))
     {
         fprintf(stderr, "error seeking to name field\n");
         return NULL;
@@ -247,12 +258,12 @@ char *getGzipName(FILE *fp, unsigned char flags)
     while (err == ERR_OK)
     {
         err = getMoreName(fp, &name, &currentLen);
-        
-        printf ("currentLen: 0x%x\n", currentLen);
     } 
     
     if (err == ERR_DONE)
     {
+        /* + 1 for the null terminator */
+        *nameLen = strnlen(name, currentLen) + 1;
         return name;
     }
     else
@@ -260,6 +271,54 @@ char *getGzipName(FILE *fp, unsigned char flags)
         if (NULL != name)
         {
             free(name);
+        }
+        return NULL;
+    }
+    
+}
+
+char *getGzipComment(FILE *fp, unsigned char flags, int nameOffset, int nameLen)
+{
+    int err;
+    int currentLen;
+    int commentOffset;
+    char *comment;
+    
+    err = getCommentOffset(flags, nameOffset, nameLen, &commentOffset);
+    if (ERR_OK != err)
+    {
+        return NULL; 
+    }
+    
+    //seek to the flag location
+    if(-1 == fseek(fp, commentOffset, SEEK_SET))
+    {
+        fprintf(stderr, "error seeking to comment field\n");
+        return NULL;
+    }
+    
+    err = ERR_OK;
+    comment = NULL; 
+    currentLen = 0;
+    
+    /* loop until an error, because getMoreName returns
+       ERR_DONE when it finds the null termintor,
+       NOTE we can use getMoreName because it has the exact
+       same constraints. */
+    while (err == ERR_OK)
+    {
+        err = getMoreName(fp, &comment, &currentLen);
+    } 
+    
+    if (err == ERR_DONE)
+    {
+        return comment;
+    }
+    else
+    {
+        if (NULL != comment)
+        {
+            free(comment);
         }
         return NULL;
     }

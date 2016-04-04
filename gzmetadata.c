@@ -55,7 +55,7 @@ void printGzipMetaData(const char * filename)
     name = getGzipComment(fp, flags, noff, nlen);
     if (NULL != name)
     {
-        printf("gzip Name: %s\n", name);
+        printf("gzip comment: %s\n", name);
         free(name);
     }
     
@@ -181,10 +181,28 @@ int getNameOffset(FILE *fp, unsigned char flags, int *offset)
     return ERR_OK;
 }
 
+int validateChars(char *name, int currentLen)
+{
+    /* simple vaidation to ensure we're not reading junk
+       data, for example due to a bad header */
+    
+    int i;
+    for (i=0; i<currentLen; i++)
+    {
+        if (name[i] < 0 )
+        {
+            return ERR_NOT_ASCII;
+        }
+    }
+    
+    return ERR_OK;
+}
+
 int getMoreName(FILE *fp, char **name, int *currentLen)
 {
     int ret;
     size_t read;
+    size_t curStrLen;
     
     *name = realloc(*name, *currentLen + BLOCKSIZE);
     
@@ -209,14 +227,23 @@ int getMoreName(FILE *fp, char **name, int *currentLen)
     else
     {
         *currentLen += read;
-        
         /* need to check that the full null terminated
         string has been obtained */
-        if (strnlen(*name, *currentLen) < *currentLen)
+        curStrLen = strnlen(*name, *currentLen);
+        if (curStrLen < *currentLen)
         {
-            /* signal caller that this 
-                string has a null terminator */
-            ret = ERR_DONE;
+            ret = validateChars(*name, curStrLen);
+            if (ERR_OK != ret)
+            {
+                fprintf(stderr, "Started reading Non-ASCII data."
+                                " Potentially mal-formed header.\n");
+            }
+            else
+            {
+                /* signal caller that this 
+                    string has a null terminator */
+                ret = ERR_DONE;
+            }
         }
         else
         {

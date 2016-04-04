@@ -4,6 +4,7 @@
 
 //Input errors
 #define ERR_INVALID_ARGUMENTS     (10)
+#define ERR_NOT_ASCII             (11)
 
 //Filesystem errors
 #define ERR_NO_FILE               (20)

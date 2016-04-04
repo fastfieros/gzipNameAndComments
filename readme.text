@@ -1,3 +1,9 @@
+Building
+=======
+run `make`
+
+testing
+========
 test0:    gzip compressed data, no name, comment or extra
 test1:    gzip compressed data, was "main.o" 
 test2:    gzip compressed data, was "main.o", has comment

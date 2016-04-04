@@ -236,7 +236,7 @@ int getMoreName(FILE *fp, char **name, int *currentLen)
             if (ERR_OK != ret)
             {
                 fprintf(stderr, "Started reading Non-ASCII data."
-                                " Potentially mal-formed header.\n");
+                                " Potentially malformed header.\n");
             }
             else
             {

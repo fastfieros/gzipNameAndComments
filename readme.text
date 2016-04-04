@@ -1,0 +1,8 @@
+test0:    gzip compressed data, no name, comment or extra
+test1:    gzip compressed data, was "main.o" 
+test2:    gzip compressed data, was "main.o", has comment
+test3:    gzip compressed data, was "main.o", extra field, from Unix
+test4:    gzip compressed data, was "main.o", extra field, has comment
+
+
+testBad1: gzip compressed data, was "main.o", has malfomed comment (non-ascii)
